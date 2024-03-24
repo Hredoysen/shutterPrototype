@@ -49,7 +49,7 @@ export const Auth: React.FC<AuthProps> = ({type}) => {
                     const db = getFirestore();
                     const userRef = doc(db, 'user', cred.user.uid);
                     setDoc(userRef, { // Correct the document data structure
-                        userType: 'default',
+                        userType: 'admin',
                         profileReady: false,
                         accessToken: cred.user.accessToken
                     })
