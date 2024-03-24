@@ -1,9 +1,10 @@
 import './Auth.scss'
-import {Button, Checkbox, Form, FormProps, Input, Skeleton} from "antd";
+import {Button, Checkbox, Form, FormProps, Input, message, Skeleton} from "antd";
 import {createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut} from "firebase/auth"
 import {doc, getFirestore, setDoc} from "firebase/firestore";
 import {auth} from "../../Firebase.tsx";
 import {useState} from "react";
+import {Logger} from "sass";
 
 type AuthProps = {
     type: 'sign-in' | 'sign-up' | 'forgot';
@@ -11,6 +12,7 @@ type AuthProps = {
 
 export const Auth: React.FC<AuthProps> = ({type}) => {
     const [isFetching, setFetching] = useState(false);
+    const [messageApi, contextHolder] = message.useMessage();
 
     type FieldType = {
         username?: string;
@@ -33,29 +35,35 @@ export const Auth: React.FC<AuthProps> = ({type}) => {
     }
 
     const onFinish: FormProps<FieldType>["onFinish"] = (values: any) => {
-        console.log('Success:', values);
         if (type === 'sign-in') {
             signInWithEmailAndPassword(auth, values.username, values.password).then((cred) => {
-                // console.log(cred)
+
             }).catch((err) => {
                 console.log(err)
             })
         }
         if (type === 'sign-up') {
-            createUserWithEmailAndPassword(auth, values.username, values.password).then((cred) => {
-                // console.log(cred)
-                const db = getFirestore();
-                setDoc(doc(db, 'users', cred.user.uid), [{userType: 'user'}])
-                    .then(() => {
-                        console.log('User created with additional data:', cred.user);
-                        // You can also handle additional tasks here after user creation
+            createUserWithEmailAndPassword(auth, values.username, values.password)
+                .then((cred) => {
+
+                    const db = getFirestore();
+                    const userRef = doc(db, 'user', cred.user.uid);
+                    setDoc(userRef, { // Correct the document data structure
+                        userType: 'default',
+                        profileReady: false,
+                        accessToken: cred.user.accessToken
                     })
-                    .catch((error) => {
-                        console.error('Error adding additional data:', error);
-                    });
-            }).catch((err) => {
-                // console.log(err)
-            })
+                        .then(() => {
+                            console.log('User created with additional data:', cred.user);
+                        })
+                        .catch((error) => {
+                            console.error('Error adding additional data:', error);
+                        });
+                })
+                .catch((err) => {
+                    console.error('Error creating user:', err);
+                });
+
         }
     };
     let title;

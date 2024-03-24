@@ -11,20 +11,42 @@ import publicRoutes from "../app/configs/routes/publicRoutes.ts";
 import AuthorityGuard from "../components/routes/AuthorityGuard.tsx";
 import {onAuthStateChanged} from "firebase/auth";
 import {auth} from "../Firebase.tsx";
+import {doc, getFirestore, getDoc} from "firebase/firestore";
+import {useDispatch, useSelector} from "react-redux";
+import { setUserData } from '../app/reducer/userActions.ts';
 
 
 function AllRoutes() {
 
-    const [user, setUser] = useState(null);
+    const dispatch = useDispatch();
+
+
+    const [user, setUser] = useState<any | null>(null);
     const [isFetching, setFetching] = useState(true);
 
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
                 setUser(user);
-                setFetching(false);
 
+
+                const db = getFirestore();
+                const userDocRef = doc(db, 'user', user.uid);
+                try {
+                    const docSnapshot = await getDoc(userDocRef);
+                    if (docSnapshot.exists()) {
+                        const userData = docSnapshot.data();
+                        dispatch({ type: 'SET_USER_DATA', payload: userData });
+                        if (docSnapshot.data()){
+                            setFetching(false);
+                        }
+                    } else {
+                        console.log('User data not found');
+                    }
+                } catch (error) {
+                    console.error('Error fetching user data:', error);
+                }
                 return;
             }
             setUser(null);
@@ -54,7 +76,7 @@ function AllRoutes() {
                             key={route.key}
                             path={route.path}
                             element={
-                                <AuthorityGuard authority={route?.authority}>
+                                <AuthorityGuard  authority={route?.authority}>
                                     <AppRoute component={route.component}/>
                                 </AuthorityGuard>
                             }
